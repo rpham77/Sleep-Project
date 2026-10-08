@@ -194,41 +194,70 @@ ggplot(prediction_data, aes(x = actual, y = predicted)) +
     y = "Predicted Sleep Quality Score"
   ) +
   theme_minimal()
-mental <- read.csv(file.choose())
 
-str(mental)
+# Model 1: Stress only
+model1 <- lm(
+  sleep_quality_score ~ stress_score,
+  data = sleep_data,
+  na.action = na.exclude
+)
 
-# Model 1: stress only
-model1 <- lm(sleep_quality_score ~ stress_score, data = mental)
+# Model 2: Stress + Mental Health Condition
+model2 <- lm(
+  sleep_quality_score ~ stress_score + mental_health_condition,
+  data = sleep_data,
+  na.action = na.exclude
+)
 
-# Model 2: stress + mental health condition
-model2 <- lm(sleep_quality_score ~ stress_score + mental_health_condition,
-             data = mental)
+# Model 3: Add Wake Episodes, Cognitive Performance, and Sleep Disorder Risk
+model3 <- lm(
+  sleep_quality_score ~
+    stress_score +
+    mental_health_condition +
+    wake_episodes_per_night +
+    cognitive_performance_score +
+    sleep_disorder_risk,
+  data = sleep_data,
+  na.action = na.exclude
+)
 
-# Model 3: larger model
-model3 <- lm(sleep_quality_score ~ stress_score +
-               mental_health_condition +
-               wake_episodes_per_night +
-               cognitive_performance_score +
-               sleep_disorder_risk,
-             data = mental)
-# Model 4: larger model + occupation
-model4 <- lm(sleep_quality_score ~ stress_score +
-               mental_health_condition +
-               wake_episodes_per_night +
-               cognitive_performance_score +
-               sleep_disorder_risk +
-               occupation,
-             data = mental)
+# Model 4: Add Occupation
+model4 <- lm(
+  sleep_quality_score ~
+    stress_score +
+    mental_health_condition +
+    wake_episodes_per_night +
+    cognitive_performance_score +
+    sleep_disorder_risk +
+    occupation,
+  data = sleep_data,
+  na.action = na.exclude
+)
 
+
+# Model Summaries
 summary(model1)
 summary(model2)
 summary(model3)
 summary(model4)
-# Compare candidate models
+
+
+# Compare Candidate Models Using AIC
 AIC(model1, model2, model3, model4)
 
-summary(model1)$adj.r.squared
-summary(model2)$adj.r.squared
-summary(model3)$adj.r.squared
-summary(model4)$adj.r.squared
+
+# Compare Adjusted R-Squared
+data.frame(
+  Model = c("Model 1", "Model 2", "Model 3", "Model 4"),
+  Adjusted_R_Squared = c(
+    summary(model1)$adj.r.squared,
+    summary(model2)$adj.r.squared,
+    summary(model3)$adj.r.squared,
+    summary(model4)$adj.r.squared
+  )
+)
+
+
+# Diagnostic Plots for Model 4
+plot(model4, which = 1)
+plot(model4, which = 2)
