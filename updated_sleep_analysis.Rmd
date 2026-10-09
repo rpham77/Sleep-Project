@@ -1,0 +1,370 @@
+
+install.packages("car")
+
+library(dplyr)
+library(ggplot2)
+library(car)
+
+sleep_data <- read.csv(file.choose())
+
+# Check the data
+names(sleep_data)
+glimpse(sleep_data)
+
+# Convert categorical variables to factors
+sleep_data <- sleep_data %>%
+  mutate(
+    occupation = as.factor(occupation),
+    mental_health_condition = as.factor(mental_health_condition),
+    sleep_disorder_risk = as.factor(sleep_disorder_risk)
+  )
+
+#sleep quality
+sleep_data %>%
+  summarise(
+    n = sum(!is.na(sleep_quality_score)),
+    mean_sleep_quality = mean(sleep_quality_score, na.rm = TRUE),
+    median_sleep_quality = median(sleep_quality_score, na.rm = TRUE),
+    sd_sleep_quality = sd(sleep_quality_score, na.rm = TRUE),
+    min_sleep_quality = min(sleep_quality_score, na.rm = TRUE),
+    max_sleep_quality = max(sleep_quality_score, na.rm = TRUE)
+  )
+
+#Occupation vs. Sleep Quality
+sleep_data %>%
+  group_by(occupation) %>%
+  summarise(
+    n = n(),
+    mean_sleep_quality = mean(sleep_quality_score, na.rm = TRUE),
+    median_sleep_quality = median(sleep_quality_score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_sleep_quality))
+
+ggplot(sleep_data, aes(x = occupation, y = sleep_quality_score)) +
+  geom_boxplot(na.rm = TRUE) +
+  labs(
+    title = "Sleep Quality by Occupation",
+    x = "Occupation",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#Wake Episodes vs Sleep Quality
+ggplot(sleep_data, aes(
+  x = wake_episodes_per_night,
+  y = sleep_quality_score
+)) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  geom_smooth(method = "lm", se = TRUE, na.rm = TRUE) +
+  labs(
+    title = "Wake Episodes per Night vs. Sleep Quality",
+    x = "Wake Episodes per Night",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal()
+
+#Stress Score vs Sleep Quality
+ggplot(sleep_data, aes(
+  x = stress_score,
+  y = sleep_quality_score
+)) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  geom_smooth(method = "lm", se = TRUE, na.rm = TRUE) +
+  labs(
+    title = "Stress Score vs. Sleep Quality",
+    x = "Stress Score",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal()
+
+
+#Mental Health Condition vs Sleep Quality
+sleep_data %>%
+  group_by(mental_health_condition) %>%
+  summarise(
+    n = n(),
+    mean_sleep_quality = mean(sleep_quality_score, na.rm = TRUE),
+    median_sleep_quality = median(sleep_quality_score, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(sleep_data, aes(
+  x = mental_health_condition,
+  y = sleep_quality_score
+)) +
+  geom_boxplot(na.rm = TRUE) +
+  labs(
+    title = "Sleep Quality by Mental Health Condition",
+    x = "Mental Health Condition",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Cognitive Performance vs. Sleep Quality
+ggplot(sleep_data, aes(
+  x = cognitive_performance_score,
+  y = sleep_quality_score
+)) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  geom_smooth(method = "lm", se = TRUE, na.rm = TRUE) +
+  labs(
+    title = "Cognitive Performance vs. Sleep Quality",
+    x = "Cognitive Performance Score",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal()
+
+#Sleep Disorder Risk vs Sleep Quality
+sleep_data %>%
+  group_by(sleep_disorder_risk) %>%
+  summarise(
+    n = n(),
+    mean_sleep_quality = mean(sleep_quality_score, na.rm = TRUE),
+    median_sleep_quality = median(sleep_quality_score, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#sleep disorder risk vs sleep quality
+ggplot(sleep_data, aes(
+  x = sleep_disorder_risk,
+  y = sleep_quality_score
+)) +
+  geom_boxplot(na.rm = TRUE) +
+  labs(
+    title = "Sleep Quality by Sleep Disorder Risk",
+    x = "Sleep Disorder Risk",
+    y = "Sleep Quality Score"
+  ) +
+  theme_minimal()
+
+#Numerical Variable Correlations
+numeric_data <- sleep_data %>%
+  select(
+    sleep_quality_score,
+    wake_episodes_per_night,
+    stress_score,
+    cognitive_performance_score
+  )
+
+cor(numeric_data, use = "pairwise.complete.obs")
+
+
+# Split data into training and testing sets
+set.seed(123)
+
+model_data <- sleep_data %>%
+  select(
+    sleep_quality_score,
+    occupation,
+    wake_episodes_per_night,
+    stress_score,
+    mental_health_condition,
+    cognitive_performance_score,
+    sleep_disorder_risk
+  ) %>%
+  na.omit()
+
+train_rows <- sample(
+  seq_len(nrow(model_data)),
+  size = floor(0.8 * nrow(model_data))
+)
+
+train_data <- model_data[train_rows, ]
+test_data <- model_data[-train_rows, ]
+
+cat("Training rows:", nrow(train_data), "\n")
+cat("Testing rows:", nrow(test_data), "\n")
+
+
+#Multiple Linear Regression
+sleep_model <- lm(
+  sleep_quality_score ~
+    occupation +
+    wake_episodes_per_night +
+    stress_score +
+    mental_health_condition +
+    cognitive_performance_score +
+    sleep_disorder_risk,
+  data = train_data
+)
+
+summary(sleep_model)
+
+
+#R-Squared vs Adjusted R-squared
+# R-squared
+summary(sleep_model)$r.squared
+
+# Adjusted R-squared
+summary(sleep_model)$adj.r.squared
+
+
+# RMSE
+test_predictions_sleep <- predict(sleep_model, newdata = test_data)
+actual_sleep <- test_data$sleep_quality_score
+
+sqrt(mean((actual_sleep - test_predictions_sleep)^2))
+mean(abs(actual_sleep - test_predictions_sleep))
+
+
+#Multicollinearity
+vif(sleep_model)
+
+#Actual vs. Predicted Sleep Quality
+prediction_data <- data.frame(
+  actual = actual_sleep,
+  predicted = test_predictions_sleep
+)
+
+ggplot(prediction_data, aes(x = actual, y = predicted)) +
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "red"
+  ) +
+  labs(
+    title = "Actual vs. Predicted Sleep Quality",
+    x = "Actual Sleep Quality Score",
+    y = "Predicted Sleep Quality Score"
+  ) +
+  theme_minimal()
+
+
+# Model 1: Stress only
+model1 <- lm(
+  sleep_quality_score ~ stress_score,
+  data = train_data
+)
+
+# Model 2: Stress + Mental Health Condition
+model2 <- lm(
+  sleep_quality_score ~ stress_score + mental_health_condition,
+  data = train_data
+)
+
+# Model 3: Add Wake Episodes, Cognitive Performance, and Sleep Disorder Risk
+model3 <- lm(
+  sleep_quality_score ~
+    stress_score +
+    mental_health_condition +
+    wake_episodes_per_night +
+    cognitive_performance_score +
+    sleep_disorder_risk,
+  data = train_data
+)
+
+# Model 4: Add Occupation
+model4 <- lm(
+  sleep_quality_score ~
+    stress_score +
+    mental_health_condition +
+    wake_episodes_per_night +
+    cognitive_performance_score +
+    sleep_disorder_risk +
+    occupation,
+  data = train_data
+)
+
+
+# Model Summaries
+summary(model1)
+summary(model2)
+summary(model3)
+summary(model4)
+
+
+# Compare Candidate Models Using AIC
+AIC(model1, model2, model3, model4)
+
+
+# Compare Adjusted R-Squared
+data.frame(
+  Model = c("Model 1", "Model 2", "Model 3", "Model 4"),
+  Adjusted_R_Squared = c(
+    summary(model1)$adj.r.squared,
+    summary(model2)$adj.r.squared,
+    summary(model3)$adj.r.squared,
+    summary(model4)$adj.r.squared
+  )
+)
+
+# Digagnostics and Prediction ----------
+#diagnostics
+par(mfrow = c(2, 2))
+plot(model4)
+par(mfrow = c(1, 1))
+
+
+#influential observations
+n <- nobs(model4)
+
+studentized_residuals <- rstudent(model4)
+leverage <- hatvalues(model4)
+cooks <- cooks.distance(model4)
+
+residual_threshold <- 3
+leverage_threshold <- 2 * length(coef(model4)) / n
+cooks_threshold <- 4 / n
+
+large_residuals <- which(abs(studentized_residuals) > residual_threshold)
+high_leverage <- which(leverage > leverage_threshold)
+influential <- which(cooks > cooks_threshold)
+
+cat("Large residual observations:", length(large_residuals), "\n")
+cat("High leverage observations:", length(high_leverage), "\n")
+cat("Cook's Distance observations:", length(influential), "\n")
+
+top_rows <- head(order(cooks, decreasing = TRUE), 10)
+
+influential_details <- data.frame(
+  Model_Row = top_rows,
+  Studentized_Residual = studentized_residuals[top_rows],
+  Leverage = leverage[top_rows],
+  Cooks_Distance = cooks[top_rows]
+)
+
+print(influential_details)
+sum(abs(studentized_residuals) > 3, na.rm = TRUE)
+
+cooks <- cooks.distance(model4)
+mean(cooks)
+max(cooks)
+
+#Not much influential outliers, 0.00001240, Very small average influence per observation. There is no obvious evidence that a single observation is dominating our sleep-quality regression model.
+
+#prediction with 95% prediction interval
+new_person <- test_data[1, c(
+  "stress_score",
+  "mental_health_condition",
+  "wake_episodes_per_night",
+  "cognitive_performance_score",
+  "sleep_disorder_risk",
+  "occupation"
+), drop = FALSE]
+
+prediction <- predict(
+  model4,
+  newdata = new_person,
+  interval = "prediction",
+  level = 0.95
+)
+
+print(new_person)
+print(prediction)
+
+#RSME n MAE
+test_predictions <- predict(model4, newdata = test_data)
+actual_test <- test_data$sleep_quality_score
+
+test_rmse <- sqrt(mean((actual_test - test_predictions)^2))
+test_mae <- mean(abs(actual_test - test_predictions))
+test_rmse
+test_mae
+
+
