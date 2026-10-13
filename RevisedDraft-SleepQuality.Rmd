@@ -19,6 +19,7 @@ sleep_data <- sleep_data %>%
     sleep_disorder_risk = as.factor(sleep_disorder_risk)
   )
 
+
 #sleep quality
 sleep_data %>%
   summarise(
@@ -44,7 +45,7 @@ sleep_data %>%
 ggplot(sleep_data, aes(x = occupation, y = sleep_quality_score)) +
   geom_boxplot(na.rm = TRUE) +
   labs(
-    title = "Sleep Quality by Occupation",
+    title = "Occupation vs Sleep Quality",
     x = "Occupation",
     y = "Sleep Quality Score"
   ) +
@@ -97,7 +98,7 @@ ggplot(sleep_data, aes(
 )) +
   geom_boxplot(na.rm = TRUE) +
   labs(
-    title = "Sleep Quality by Mental Health Condition",
+    title = "Mental Health Condition vs Sleep Quality",
     x = "Mental Health Condition",
     y = "Sleep Quality Score"
   ) +
@@ -127,15 +128,14 @@ sleep_data %>%
     median_sleep_quality = median(sleep_quality_score, na.rm = TRUE),
     .groups = "drop"
   )
-
-#sleep disorder risk vs sleep quality
+#Sleep Disorder Risk vs Sleep Quality
 ggplot(sleep_data, aes(
   x = sleep_disorder_risk,
   y = sleep_quality_score
 )) +
   geom_boxplot(na.rm = TRUE) +
   labs(
-    title = "Sleep Quality by Sleep Disorder Risk",
+    title = "Sleep Disorder Risk vs Sleep Quality",
     x = "Sleep Disorder Risk",
     y = "Sleep Quality Score"
   ) +
